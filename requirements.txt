@@ -1,0 +1,4 @@
+deprecated
+requests
+beautifulsoup4
+slackclient
