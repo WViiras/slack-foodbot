@@ -34,10 +34,10 @@ class SlackUtil(metaclass=Singleton):
         self._slack_client = slackclient.SlackClient(slack_token)
 
     def send_to_slack(self, method=None, channel=None, **kwargs):
-        if not method:
-            raise Exception("No channel provided")
+        print(f"method='{method}'; channel='{channel}'; kwargs='{kwargs}'")
 
-        print(f"method:'{method}'; slack_kwargs:'{kwargs}'")
+        if not method:
+            raise Exception("No method provided")
 
         response = None
         response = self._slack_client.api_call(
@@ -72,10 +72,10 @@ def simple_get(url):
             if is_good_response(resp):
                 return resp.content
             else:
-                return None
+                return
     except requests.RequestException as e:
         print(f"Error during requests to {url} : {str(e)}")
-        return None
+        return
 
 
 def is_good_response(resp):
