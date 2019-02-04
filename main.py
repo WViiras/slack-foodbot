@@ -96,14 +96,14 @@ class Reval(Site):
 
     def _generate_from_reval(self) -> List[Tuple]:
         print(f"find_daily {self.site_name}")
-        reval_html = util.mock_download_reval()
-        # FIXME soup: BeautifulSoup = self.get_soup()
-        soup: BeautifulSoup = BeautifulSoup(reval_html, features="html.parser")
+        # reval_html = util.mock_download_reval()
+        # soup: BeautifulSoup = BeautifulSoup(reval_html, features="html.parser")
+        soup: BeautifulSoup = self.get_soup()
         if soup is None:
             return
 
         # check date
-        is_valid_date = True  # FIXME self._check_post_date(soup)
+        is_valid_date = self._check_post_date(soup)
         if not is_valid_date:
             return
 
@@ -138,7 +138,7 @@ class Reval(Site):
                     return offers
 
     def generate_menu(self) -> Dict:
-        self.site_name = "Reval Café"
+        self.locale_name = "Reval Café"
         menu = self._generate_from_reval()
         if not menu:
             menu = Paevapakkumised("reval-tere").generate_menu()
@@ -146,8 +146,8 @@ class Reval(Site):
 
     def _get_today_as_reval_day(self) -> str:
         today = datetime.now().strftime("%A")
-        # FIXME return self.REVAL_DAY_ENG_EST.get(today)
-        return "Kolmapäeval"
+        return self.REVAL_DAY_ENG_EST.get(today)
+        # return "Kolmapäeval"
 
 
 class Paevapakkumised(Site):
@@ -189,7 +189,7 @@ def generate_daily_msg_string(sites: List[Site]) -> str:
 
     msg = util.get_msg_template(util.template_daily_header)
 
-    today = datetime.now().isoformat()
+    today = datetime.now().strftime("%d-%m-%Y")
     msg = msg \
         .replace("::DATE:", today) \
         .replace("::MENU:", menu_string) \
@@ -200,8 +200,8 @@ def generate_daily_msg_string(sites: List[Site]) -> str:
 
 def generate_daily_menu():
     menu_generators = dict()
-    menu_generators["reval-tere"] = Paevapakkumised
-    # menu_generators["reval"] = Reval
+    # menu_generators["reval-tere"] = Paevapakkumised
+    menu_generators["reval"] = Reval
     menu_generators["akbana"] = Paevapakkumised
 
     sites: List[Site] = []
@@ -230,7 +230,7 @@ def main(**kwargs):
 
     channel = kwargs.get("channel")
 
-    method = "chat.postMessage",
+    method = "chat.postMessage"
     slack_kwargs = {}
 
     text = get_custom_text() if kwargs.get("custom") else generate_daily_menu()
