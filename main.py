@@ -226,7 +226,7 @@ def get_custom_text():
 
 
 def main(**kwargs):
-    util.SlackUtil(token=kwargs.get("token"))  # init SlackUtil
+    util.SlackUtil()  # init SlackUtil
 
     channel = kwargs.get("channel")
 
@@ -244,7 +244,6 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-token")
     parser.add_argument("-custom", action="store_true")
     parser.add_argument("-channel")
 

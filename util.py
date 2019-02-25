@@ -6,10 +6,15 @@ import urllib.parse
 
 import requests
 import slackclient
+import yaml
 
 resources_path = os.path.join("resources")
 site_resources_path = os.path.join(resources_path, "sites")
 templates_path = os.path.join(resources_path, "templates")
+conf_file_path = os.path.join(resources_path, "conf.yaml")
+
+with open(conf_file_path, "r") as f:
+    configuration = yaml.load(f)
 
 template_daily_msg = "msg-daily"
 template_daily_header = "msg-header"
@@ -26,12 +31,16 @@ class Singleton(type):
 
 
 class SlackUtil(metaclass=Singleton):
-    def __init__(self, **kwargs):
-        slack_token = kwargs.get("token")
 
+    def __init__(self):
+        slack_token = self._get_slack_token()
         if not slack_token.strip():
             raise Exception("no token given!")
         self._slack_client = slackclient.SlackClient(slack_token)
+
+    @staticmethod
+    def _get_slack_token() -> str:
+        return configuration["slack"]["token"]
 
     def send_to_slack(self, method=None, channel=None, **kwargs):
         print(f"method='{method}'; channel='{channel}'; kwargs='{kwargs}'")
