@@ -1,12 +1,14 @@
 import abc
 import re
+from _ast import slice
 from datetime import datetime
 from typing import Dict, List, Tuple
 
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet, Tag
 
-import util
+from slack_foodbot import foodbot_util
+from util import common_util, slack_util
 
 
 class Site:
@@ -15,7 +17,7 @@ class Site:
             raise Exception("No site name provided")
         self.site_name = site_name
 
-        site_urls = util.read_site_file_lines(site_name, "url")
+        site_urls = foodbot_util.read_site_file_lines(site_name, "url")
         self.pretty_url = site_urls[1].strip()
         self.download_url = site_urls[0].strip()
 
@@ -24,7 +26,7 @@ class Site:
         self.daily_offers = self.generate_menu()
 
     def get_soup(self) -> BeautifulSoup:
-        site = util.simple_get(self.download_url)
+        site = common_util.simple_get(self.download_url)
         return BeautifulSoup(site, features="html.parser")
 
     @abc.abstractmethod
@@ -34,7 +36,7 @@ class Site:
     def generate_menu_string(self) -> str:
         print(f"generate_menu_string for {self.locale_name}")
 
-        food_item_template = util.get_msg_template(util.template_msg_food_item)
+        food_item_template = foodbot_util.get_msg_template(foodbot_util.template_msg_food_item)
 
         offers_part = ""
 
@@ -43,14 +45,14 @@ class Site:
             item_cost = str(cost)
             offers_part += food_item_template \
                 .replace("::FOOD:", item_name.strip()) \
-                .replace("::PRICE:", item_cost)
+                .replace("::PRICE:", "")
+            # .replace("::PRICE:", item_cost)
 
-        daily_menu = util.get_msg_template(util.template_daily_msg)
+        daily_menu = foodbot_util.get_msg_template(foodbot_util.template_daily_msg)
         daily_menu = daily_menu \
             .replace("::NAME:", self.locale_name) \
             .replace("::OFFERS:", offers_part) \
             .replace("::URL:", self.pretty_url) \
-            .replace("::EXTRA:", "")
 
         # print(daily_menu)
 
@@ -165,6 +167,8 @@ class Paevapakkumised(Site):
         for offer in offers:
             contents = offer.contents
             food = contents[0]
+            if "Hetkel kahjuks pakkumised puuduvad" in food:
+                return None
             cost = contents[1].text
             daily_offers.append((food, cost))
 
@@ -187,7 +191,7 @@ def generate_daily_msg_string(sites: List[Site]) -> str:
 
     menu_string = "\n".join(menu_strings)
 
-    msg = util.get_msg_template(util.template_daily_header)
+    msg = foodbot_util.get_msg_template(foodbot_util.template_daily_header)
 
     today = datetime.now().strftime("%d-%m-%Y")
     msg = msg \
@@ -200,19 +204,25 @@ def generate_daily_msg_string(sites: List[Site]) -> str:
 
 def generate_daily_menu():
     menu_generators = dict()
-    # menu_generators["reval-tere"] = Paevapakkumised
-    menu_generators["reval"] = Reval
-    menu_generators["akbana"] = Paevapakkumised
+    menu_generators["reval-tere"] = Paevapakkumised
+    menu_generators["daily"] = Paevapakkumised
+    # menu_generators["reval"] = Reval
+    # menu_generators["akbana"] = Paevapakkumised
 
     sites: List[Site] = []
     for site_name, menu_generator in menu_generators.items():
         try:
             site_menu_generator: Site = menu_generator(site_name)
-            sites.append(site_menu_generator)
+            if site_menu_generator.daily_offers:
+                sites.append(site_menu_generator)
         except Exception as e:
             print(e)
 
+    if not sites:
+        return
+
     menu_string = generate_daily_msg_string(sites)
+
     print("generated daily menu")
     print(menu_string)
     return menu_string
@@ -220,13 +230,13 @@ def generate_daily_menu():
 
 def get_custom_text():
     filename = "custom.msg"
-    file_path = util.join_path(util.resources_path, filename)
+    file_path = common_util.join_path(foodbot_util.resources_path, filename)
     with open(file_path, 'r') as f:
         return f.read().strip()
 
 
 def main(**kwargs):
-    util.SlackUtil()  # init SlackUtil
+    # slack_util.SlackClient(foodbot_util.get_slack_token())  # init SlackUtil
 
     channel = kwargs.get("channel")
 
@@ -235,19 +245,13 @@ def main(**kwargs):
 
     text = get_custom_text() if kwargs.get("custom") else generate_daily_menu()
 
+    if not text:
+        return
+
     slack_kwargs["text"] = text
 
-    util.SlackUtil().send_to_slack(method, channel, **slack_kwargs)
+    # print(slack_kwargs)
 
+    slack_util.BotClient().client.api_call(method, channel=channel, **slack_kwargs)
 
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-custom", action="store_true")
-    parser.add_argument("-channel")
-
-    args = vars(parser.parse_args())
-    print(f"running with arguments: '{args}'")
-    main(**args)
-    print("==foodbot done==")
+    # slack_util.SlackClient().send_to_slack(method, channel, **slack_kwargs)
