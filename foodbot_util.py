@@ -14,7 +14,7 @@ with open(conf_file_path, "r") as f:
 
 template_daily_msg = "msg-daily"
 template_daily_header = "msg-header"
-template_msg_food_item = "msg-daily-food2"
+template_msg_food_item = "msg-daily-food"
 
 
 def read_site_file_lines(site: str, filename: str) -> typing.List[str]:

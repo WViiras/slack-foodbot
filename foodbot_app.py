@@ -1,6 +1,5 @@
 import abc
 import re
-from _ast import slice
 from datetime import datetime
 from typing import Dict, List, Tuple
 
@@ -45,8 +44,7 @@ class Site:
             item_cost = str(cost)
             offers_part += food_item_template \
                 .replace("::FOOD:", item_name.strip()) \
-                .replace("::PRICE:", "")
-            # .replace("::PRICE:", item_cost)
+                .replace("::PRICE:", item_cost)
 
         daily_menu = foodbot_util.get_msg_template(foodbot_util.template_daily_msg)
         daily_menu = daily_menu \
@@ -225,14 +223,19 @@ def generate_daily_menu():
 
     print("generated daily menu")
     print(menu_string)
-    return menu_string
+    return {"text": menu_string}
 
 
-def get_custom_text():
-    filename = "custom.msg"
+def get_custom_text(filename):
     file_path = common_util.join_path(foodbot_util.resources_path, filename)
     with open(file_path, 'r') as f:
         return f.read().strip()
+
+
+def get_custom_image(filename):
+    file_path = common_util.join_path(foodbot_util.resources_path, filename)
+    with open(file_path, "rb") as f:
+        return {"file": f.read()}
 
 
 def main(**kwargs):
@@ -240,18 +243,25 @@ def main(**kwargs):
 
     channel = kwargs.get("channel")
 
-    method = "chat.postMessage"
     slack_kwargs = {}
 
-    text = get_custom_text() if kwargs.get("custom") else generate_daily_menu()
+    if kwargs.get("is_custom"):
+        if kwargs.get("is_image"):
+            message_content = get_custom_text("custom.msg")
+        else:
+            message_content = get_custom_image("foodtruck.jpg")
+    else:
+        message_content = generate_daily_menu()
 
-    if not text:
+    if not message_content:
         return
 
-    slack_kwargs["text"] = text
-
+    slack_kwargs.update(message_content)
     # print(slack_kwargs)
 
-    slack_util.BotClient().client.api_call(method, channel=channel, **slack_kwargs)
+    if kwargs.get("is_custom") and kwargs.get("is_image"):
+        response = slack_util.BotClient().client.api_call("files.upload", channels=[channel], **slack_kwargs)
+    else:
+        response = slack_util.BotClient().client.api_call("chat.postMessage", channel=channel, **slack_kwargs)
 
-    # slack_util.SlackClient().send_to_slack(method, channel, **slack_kwargs)
+    print(response)
