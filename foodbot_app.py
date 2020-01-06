@@ -1,4 +1,5 @@
 import abc
+import logging
 import re
 from datetime import datetime
 from typing import Dict, List, Tuple
@@ -34,7 +35,7 @@ class Site:
         pass
 
     def generate_menu_string(self) -> str:
-        print(f"generate_menu_string for {self.locale_name}")
+        logging.info("Generate_menu_string for %s", self.locale_name)
 
         food_item_template = foodbot_util.get_msg_template(foodbot_util.template_msg_food_item)
 
@@ -53,7 +54,7 @@ class Site:
             .replace("::OFFERS:", offers_part) \
             .replace("::URL:", self.pretty_url)
 
-        # print(daily_menu)
+        logging.debug(daily_menu)
 
         return daily_menu
 
@@ -96,7 +97,7 @@ class Reval(Site):
                 return start_date <= datetime.now() <= end_date
 
     def _generate_from_reval(self) -> List[Tuple]:
-        print(f"find_daily {self.site_name}")
+        logging.info("Find_daily %s", self.site_name)
         # reval_html = util.mock_download_reval()
         # soup: BeautifulSoup = BeautifulSoup(reval_html, features="html.parser")
         soup: BeautifulSoup = self.get_soup()
@@ -153,7 +154,7 @@ class Reval(Site):
 
 class Paevapakkumised(Site):
     def generate_menu(self):
-        print(f"generate_menu for {self.site_name}")
+        logging.info("Generate_menu for %s", self.site_name)
         soup = self.get_soup()
         if soup is None:
             return
@@ -214,15 +215,15 @@ def generate_daily_menu():
             if site_menu_generator.daily_offers:
                 sites.append(site_menu_generator)
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     if not sites:
         return
 
     menu_string = generate_daily_msg_string(sites)
 
-    print("generated daily menu")
-    print(menu_string)
+    logging.info("Generated daily menu")
+    logging.debug(menu_string)
     return menu_string
 
 
@@ -236,26 +237,44 @@ def main(**kwargs):
 
     channel = kwargs.get("channel")
 
+    client_action = None
+    action_args = {}
     response = None
+
     custom_path = kwargs.get("custom_path")
     image_path = kwargs.get("image_path")
     if custom_path is not None:
         message_content = get_custom_text(custom_path)
-        response = bot_client.client.chat_postMessage(channel=channel, text=message_content)
+        client_action = bot_client.client.chat_postMessage
+        action_args = {'channel': channel, 'text': message_content}
     elif image_path is not None:
-        print(f"File from path {image_path}")
-        response = bot_client.client.files_upload(file=image_path, channels=channel)
+        logging.info("File from path %s", image_path)
+        client_action = bot_client.client.files_upload
+        action_args = {'file': image_path, 'channels': channel}
     else:
         message_content = generate_daily_menu()
         if not message_content:
             return
-        response = bot_client.client.chat_postMessage(channel=channel, text=message_content)
+        client_action = bot_client.client.chat_postMessage
+        action_args = {'channel': channel, 'text': message_content}
 
-    print(f"response: \n{response}\n")
+    logging.info("Running action: '%s'", client_action.__name__)
+    logging.info("Action args: \n\t%s", action_args)
+    response = client_action(**action_args)
+    response = None
+
+    logging.info(f"Response: \n\n{response}\n")
 
 
 if __name__ == '__main__':
     import argparse
+
+    log_conf = foodbot_util.configuration['logging']
+    logging.basicConfig(
+        format=log_conf['format'],
+        level=log_conf['level']
+    )
+    logging.info("== Running foodbot ==")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-channel",
@@ -267,6 +286,7 @@ if __name__ == '__main__':
                         help="Path to image.")
 
     args = vars(parser.parse_args())
-    print(f"running with arguments: '{args}'")
+
+    logging.info("Running with arguments: \n\t'%s'", args)
     main(**args)
-    print("==foodbot done==")
+    logging.info("== Foodbot done ==")

@@ -6,7 +6,7 @@ import yaml
 resources_path = Path("resources")
 site_resources_path = Path(resources_path, "sites")
 template_resources_path = Path(resources_path, "templates")
-conf_file_path = Path(resources_path, "slack_conf.yaml")
+conf_file_path = Path(resources_path, "configuration.yaml")
 
 with open(conf_file_path, "r") as cnf_f:
     configuration = yaml.load(cnf_f)

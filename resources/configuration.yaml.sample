@@ -5,3 +5,7 @@ token:
 client:
   secret: 00000000000000000000000000000000
   id: 0000000000.000000000000
+logging:
+  path: logging
+  format: '%(levelname)s: %(message)s'
+  level: INFO

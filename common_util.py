@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import re
 import urllib.parse
 
@@ -22,7 +23,7 @@ def simple_get(url):
             else:
                 return
     except requests.RequestException as e:
-        print(f"Error during requests to {url} : {str(e)}")
+        logging.error("Error during requests to %s : %s", url, str(e))
         return
 
 
