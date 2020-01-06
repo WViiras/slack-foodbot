@@ -50,7 +50,7 @@ class Site:
         daily_menu = daily_menu \
             .replace("::NAME:", self.locale_name) \
             .replace("::OFFERS:", offers_part) \
-            .replace("::URL:", self.pretty_url) \
+            .replace("::URL:", self.pretty_url)
 
         # print(daily_menu)
 
@@ -203,14 +203,14 @@ def generate_daily_msg_string(sites: List[Site]) -> str:
 def generate_daily_menu():
     menu_generators = dict()
     menu_generators["reval-tere"] = Paevapakkumised
-    menu_generators["daily"] = Paevapakkumised
+    # menu_generators["daily"] = Paevapakkumised
     # menu_generators["reval"] = Reval
     # menu_generators["akbana"] = Paevapakkumised
 
     sites: List[Site] = []
     for site_name, menu_generator in menu_generators.items():
         try:
-            site_menu_generator: Site = menu_generator(site_name)
+            site_menu_generator = menu_generator(site_name)
             if site_menu_generator.daily_offers:
                 sites.append(site_menu_generator)
         except Exception as e:
@@ -223,7 +223,7 @@ def generate_daily_menu():
 
     print("generated daily menu")
     print(menu_string)
-    return {"text": menu_string}
+    return menu_string
 
 
 def get_custom_text(filename):
@@ -232,36 +232,24 @@ def get_custom_text(filename):
         return f.read().strip()
 
 
-def get_custom_image(filename):
-    file_path = common_util.join_path(foodbot_util.resources_path, filename)
-    with open(file_path, "rb") as f:
-        return {"file": f.read()}
-
-
 def main(**kwargs):
     # slack_util.SlackClient(foodbot_util.get_slack_token())  # init SlackUtil
 
     channel = kwargs.get("channel")
 
-    slack_kwargs = {}
-
-    if kwargs.get("is_custom"):
-        if kwargs.get("is_image"):
-            message_content = get_custom_text("custom.msg")
-        else:
-            message_content = get_custom_image("foodtruck.jpg")
+    response = None
+    custom_path = kwargs.get("custom_path")
+    image_path = kwargs.get("image_path")
+    if custom_path is not None:
+        message_content = get_custom_text(custom_path)
+        response = slack_util.BotClient().client.chat_postMessage(channel=channel, text=message_content)
+    elif image_path is not None:
+        print(f"File from path {image_path}")
+        response = slack_util.BotClient().client.files_upload(file=image_path, channels=channel)
     else:
         message_content = generate_daily_menu()
+        if not message_content:
+            return
+        response = slack_util.BotClient().client.chat_postMessage(channel=channel, text=message_content)
 
-    if not message_content:
-        return
-
-    slack_kwargs.update(message_content)
-    # print(slack_kwargs)
-
-    if kwargs.get("is_custom") and kwargs.get("is_image"):
-        response = slack_util.BotClient().client.api_call("files.upload", channels=[channel], **slack_kwargs)
-    else:
-        response = slack_util.BotClient().client.api_call("chat.postMessage", channel=channel, **slack_kwargs)
-
-    print(response)
+    print(f"response: \n{response}\n")
