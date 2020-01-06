@@ -9,6 +9,11 @@ from bs4.element import ResultSet, Tag
 from slack_foodbot import foodbot_util
 from util import common_util, slack_util
 
+# import pytesseract
+# import cv2
+
+from pathlib import Path
+
 
 class Site:
     def __init__(self, site_name: str):
@@ -55,6 +60,28 @@ class Site:
         # print(daily_menu)
 
         return daily_menu
+
+
+class Tondi:
+    def __init__(self, site_name):
+        self.daily_offers = self.generate_menu()
+
+    def generate_menu_string(self):
+        print(f"generate_menu_string for Tondi")
+
+        daily_menu = [line for line in self.daily_offers.split("\n") if line != ""]
+        about_open_cv = "\n\nTondi Grill was brought to you by Open CV and Google Tesseract OCR " \
+                        "\nhttps://opencv.org/about/" \
+                        "\nhttps://opensource.google.com/projects/tesseract"
+        daily_menu = "\n".join(daily_menu) + about_open_cv
+
+        return daily_menu
+
+    def generate_menu(self) -> Dict:
+        img = cv2.imread("slack_foodbot/resources/tondi_1.jpg")
+        img_scaled = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        text = pytesseract.image_to_string(img_scaled)
+        return text
 
 
 class Reval(Site):
@@ -204,6 +231,7 @@ def generate_daily_menu():
     menu_generators = dict()
     menu_generators["reval-tere"] = Paevapakkumised
     # menu_generators["daily"] = Paevapakkumised
+    menu_generators["tondi"] = Tondi
     # menu_generators["reval"] = Reval
     # menu_generators["akbana"] = Paevapakkumised
 
@@ -230,6 +258,11 @@ def get_custom_text(filename):
     file_path = common_util.join_path(foodbot_util.resources_path, filename)
     with open(file_path, 'r') as f:
         return f.read().strip()
+    # text = ">>>"
+    # img = cv2.imread(filename)
+    # text += pytesseract.image_to_string(img)
+    # text = "This was brought to you by Open CV \nhttps://opencv.org/about/"
+    # return {"text": text}
 
 
 def main(**kwargs):
