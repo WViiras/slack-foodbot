@@ -6,8 +6,9 @@ from typing import Dict, List, Tuple
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet, Tag
 
-from slack_foodbot import foodbot_util
-from util import common_util, slack_util
+import common_util
+import foodbot_util
+import slack_util
 
 
 class Site:
@@ -151,7 +152,6 @@ class Reval(Site):
 
 
 class Paevapakkumised(Site):
-
     def generate_menu(self):
         print(f"generate_menu for {self.site_name}")
         soup = self.get_soup()
@@ -226,14 +226,13 @@ def generate_daily_menu():
     return menu_string
 
 
-def get_custom_text(filename):
-    file_path = common_util.join_path(foodbot_util.resources_path, filename)
-    with open(file_path, 'r') as f:
+def get_custom_text(custom_path):
+    with open(custom_path, 'r') as f:
         return f.read().strip()
 
 
 def main(**kwargs):
-    # slack_util.SlackClient(foodbot_util.get_slack_token())  # init SlackUtil
+    bot_client = slack_util.BotClient()
 
     channel = kwargs.get("channel")
 
@@ -242,14 +241,32 @@ def main(**kwargs):
     image_path = kwargs.get("image_path")
     if custom_path is not None:
         message_content = get_custom_text(custom_path)
-        response = slack_util.BotClient().client.chat_postMessage(channel=channel, text=message_content)
+        response = bot_client.client.chat_postMessage(channel=channel, text=message_content)
     elif image_path is not None:
         print(f"File from path {image_path}")
-        response = slack_util.BotClient().client.files_upload(file=image_path, channels=channel)
+        response = bot_client.client.files_upload(file=image_path, channels=channel)
     else:
         message_content = generate_daily_menu()
         if not message_content:
             return
-        response = slack_util.BotClient().client.chat_postMessage(channel=channel, text=message_content)
+        response = bot_client.client.chat_postMessage(channel=channel, text=message_content)
 
     print(f"response: \n{response}\n")
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-channel",
+                        default="bot_test",
+                        help="Channel to send message to")
+    parser.add_argument("-custom_path",
+                        help="Path to custom message")
+    parser.add_argument("-image_path",
+                        help="Path to image.")
+
+    args = vars(parser.parse_args())
+    print(f"running with arguments: '{args}'")
+    main(**args)
+    print("==foodbot done==")

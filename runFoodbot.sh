@@ -4,7 +4,7 @@ channel=bot_test
 #channel=tallinn-lunch
 
 run_script() {
-    (cd ~/path/to/script/folder && python3 foodbot_main.py -channel ${channel} "${@}") #>> "${logfile}")
+    (cd ~/path/to/script/folder && python3 foodbot_app.py -channel ${channel} "${@}") #>> "${logfile}")
 }
 
 run_daily() {
